@@ -1,0 +1,297 @@
+<div class="form-container">
+  <p style="width: 81%; margin: 0 auto; padding: 20px 0">
+    Enter the URL of the product to get reviews
+  </p>
+  <form id="reviewForm" method="POST">
+    {% csrf_token %}
+    <input type="text" name="url" placeholder="Enter URL" />
+    <input type="submit" value="Submit" />
+  </form>
+</div>
+<!-- <i data-hook="review-star-rating" class="a-icon a-icon-star a-star-4 review-rating"><span class="a-icon-alt">4.0 out of 5 stars</span></i> -->
+
+<!-- <div id="response"></div> -->
+<div id="reviews-container">
+  <div id="reviews">
+    <div class="loading"></div>
+  </div>
+</div>
+<script>
+  document
+    .getElementById("reviewForm")
+    .addEventListener("submit", function (e) {
+      e.preventDefault(); // Prevent default form submission
+      let loading = true;
+      document.getElementsByClassName("loading")[0].innerHTML = "Loading...";
+      document.getElementsByClassName("loading")[0].style.display = "flex";
+
+      const formData = new FormData(this);
+
+      fetch("{% url 'enter_url' %}", {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": "{{ csrf_token }}",
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          loading = false;
+          document.getElementsByClassName("loading")[0].style.display = "none";
+          console.log(data);
+          const reviewContainer = document.getElementById("reviews");
+          reviewContainer.innerHTML = ""; // Clear previous reviews
+
+          if (data.error) {
+            reviewContainer.innerHTML = `<p style="color: red;">${data.error}</p>`;
+          } else {
+            reviewContainer.innerHTML = `<h3>Total Reviews: ${data.reviews_count}</h3>`;
+            const reviews = data.reviews;
+            const reviewsPerPage = 5; // Number of reviews per page
+            let currentPage = 1;
+
+            function displayReviews(page) {
+              const startIndex = (page - 1) * reviewsPerPage;
+              const endIndex = startIndex + reviewsPerPage;
+              const paginatedReviews = reviews.slice(startIndex, endIndex);
+
+              // Clear the container before displaying new reviews
+              reviewContainer.innerHTML = `<h3>Total Reviews: ${data.reviews_count}</h3>`; // Reset header
+              const message = `
+                <div class="heading">
+                <h3>Here are the reviews for your selected product:</h3>
+                <p>We found <strong>${data.reviews_count}</strong> reviews. Check them out below!</p>
+                </div>
+                `;
+              reviewContainer.innerHTML = message; // Display message
+
+              paginatedReviews.forEach((review, index) => {
+                const ratingValue = parseInt(review.rating);
+                let starIconClass = "";
+
+                if (ratingValue === 4) {
+                  starIconClass = "a-icon a-icon-star a-star-4 review-rating";
+                } else if (ratingValue === 3) {
+                  starIconClass = "a-icon a-icon-star a-star-3 review-rating";
+                } else if (ratingValue === 5) {
+                  starIconClass = "a-icon a-icon-star a-star-5 review-rating";
+                } else {
+                  starIconClass = "a-icon a-icon-star a-star-1 review-rating"; // default for other ratings
+                }
+
+                reviewContainer.innerHTML += `
+                        <div class="review-item">
+                            <div class='name-photo'>
+                            
+                            <div class="a-profile-avatar"><img src="https://images-eu.ssl-images-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png"></div>
+                            <p class="reviewer"> ${review.reviewer}</p>
+                            </div>       
+                             <div class="date">${review.date}</div>
+                            <div class = 'rate-n-title'>
+                            <i class="${starIconClass}">
+                                <span class="a-icon-alt">${ratingValue} out of 5 stars</span>
+                            </i>
+                           
+                               
+                            <div class="title">${review.title}</div>
+                            </div>
+                      
+                            
+                            <div class="content">${review.body}</div> 
+                       
+                    
+                        </div>`;
+              });
+
+              updatePaginationControls(page, reviews.length);
+            }
+
+            function updatePaginationControls(page, totalReviews) {
+              const paginationContainer = document.createElement("div");
+              paginationContainer.className = "pagination";
+
+              const totalPages = Math.ceil(totalReviews / reviewsPerPage);
+
+              if (page > 1) {
+                const prevButton = document.createElement("button");
+                prevButton.textContent = "Previous";
+                prevButton.className = "pagination-button prev-button";
+                prevButton.onclick = () => {
+                  currentPage--;
+                  displayReviews(currentPage);
+                };
+                paginationContainer.appendChild(prevButton);
+              }
+
+              if (page < totalPages) {
+                const nextButton = document.createElement("button");
+                nextButton.className = "pagination-button next-button";
+
+                nextButton.textContent = "Next";
+                nextButton.onclick = () => {
+                  currentPage++;
+                  displayReviews(currentPage);
+                };
+                paginationContainer.appendChild(nextButton);
+              }
+
+              reviewContainer.appendChild(paginationContainer);
+            }
+
+            // Initial display
+            displayReviews(currentPage);
+          }
+        })
+        .catch((error) => console.error("Error:", error));
+    });
+</script>
+<style>
+  /* rating style */
+  .a-icon.a-icon-star {
+    background-image: url(https://m.media-amazon.com/images/S/sash/rYl2U4vajeeRGLE.png);
+    background-image: url(https://m.media-amazon.com/images/S/sash/rYl2U4vajeeRGLE.png);
+    background-size: 512px 512px;
+    background-repeat: no-repeat;
+    height: 18px;
+    width: 80px;
+    display: inline-block;
+  }
+  .a-icon.a-star-4 {
+    background-position: -2px -196px;
+  }
+
+  [class*="a-icon-star"] > .a-icon-alt {
+    clip-path: circle(0);
+    left: auto;
+    width: 100%;
+    height: 100%;
+    font-size: inherit;
+    line-height: normal;
+    opacity: 0;
+  }
+  .a-icon.a-star-5 {
+    background-position: -2px -176px;
+  }
+
+  .a-icon.a-star-3 {
+    background-position: -2px -236px;
+  }
+
+  .a-icon.a-star-1 {
+    background-position: -99px -300px;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+  }
+  .heading {
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    width: 81%;
+    margin: auto;
+  }
+  p {
+    font-size: 1em;
+    margin: 0;
+  }
+  #reviewForm {
+    max-width: 81%;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  input[type="submit"] {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s;
+    margin-left: auto;
+  }
+  input[type="submit"]:hover {
+    background-color: #2980b9;
+  }
+
+  .review-item {
+    display: flex;
+    flex-direction: column;
+
+    margin: 25px auto;
+    width: 81%;
+  }
+  .pagination {
+    display: flex;
+    justify-content: center;
+  }
+
+  .pagination-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .pagination-button:hover {
+    background-color: #2980b9;
+  }
+
+  .date {
+    font-size: 14px;
+    line-height: 20px;
+    color: #8c8c8c;
+  }
+  .rate-n-title {
+    display: flex;
+    margin: 1px 0 10 0;
+  }
+  .a-profile-avatar img {
+    width: 34px;
+  }
+  .name-photo {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  .prev-button {
+    background-color: #afafaf;
+    border: 1px solid #8e8b8b;
+    &:hover {
+      background-color: #8d979e;
+    }
+  }
+
+  p.reviewer {
+    margin-left: 5px;
+  }
+  .title {
+    margin-left: 5px;
+  }
+  .loading {
+    display: flex;
+    justify-content: center;
+    margin: 50px auto;
+  }
+</style>
