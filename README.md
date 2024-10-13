@@ -97,3 +97,5 @@ Display Reviews on UI with Pagination Controls
   |
  End
 ```
+> [!NOTE]  
+> works only for amazon product page
